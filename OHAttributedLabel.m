@@ -246,24 +246,41 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 	 }];
 	return foundResult;
 }
--(NSTextCheckingResult*)linkAtPoint:(CGPoint)pt {
+
+-(NSTextCheckingResult*)linkAtPoint:(CGPoint)point {
 	static const CGFloat kVMargin = 5.f;
-	if (!CGRectContainsPoint(CGRectInset(self.bounds, 0, -kVMargin), pt)) return nil;
+	if (!CGRectContainsPoint(CGRectInset(self.bounds, 0, -kVMargin), point)) return nil;
 	
 	CFArrayRef lines = CTFrameGetLines(textFrame);
-	int nbLines = CFArrayGetCount(lines);
-	CGFloat lineHeight = 0;
-	NSTextCheckingResult* link = nil;
+	CFIndex nbLines = CFArrayGetCount(lines);
+	
 	CGPoint origins[nbLines];
 	CTFrameGetLineOrigins(textFrame, CFRangeMake(0,0), origins);
-	for (int i=0;i<nbLines;++i) {
-		CGFloat lineY = (self.bounds.size.height-origins[i].y); // convert to "origin on top" coords
-		CTLineRef line = CFArrayGetValueAtIndex(lines, i);
-		(void)CTLineGetTypographicBounds(line, &lineHeight, NULL, NULL);
-		if ((lineY-kVMargin < pt.y) && (pt.y < lineY+lineHeight+kVMargin)){
-			CGPoint relativePoint = CGPointMake(pt.x-origins[i].x, pt.y-lineY);
+	
+	for (int lineIndex=0; lineIndex<nbLines; lineIndex++) {
+		
+		// this actually the origin of the line rect, so we need the whole rect to flip it
+		CGPoint lineOriginFlipped = origins[lineIndex];
+		
+		CTLineRef line = CFArrayGetValueAtIndex(lines, lineIndex);
+		CGFloat lineAccent = 0;
+		CGFloat lineDecent = 0;
+		CGFloat lineLeading = 0;
+		CGFloat lineWidth = CTLineGetTypographicBounds(line, &lineAccent, &lineDecent, &lineLeading);
+		
+		CGFloat lineHeight = lineAccent + lineDecent;
+		
+		CGRect lineRectFlipped = CGRectMake(lineOriginFlipped.x, lineOriginFlipped.y, lineWidth, lineHeight);
+		CGRect lineRect = CGRectFlipped(lineRectFlipped, self.bounds);
+		
+		lineRect = CGRectInset(lineRect, 0, -kVMargin);
+		if (CGRectContainsPoint(lineRect, point)) {
+			
+			CGPoint relativePoint = CGPointMake(point.x-CGRectGetMinX(lineRect),
+												point.y-CGRectGetMinY(lineRect));
 			CFIndex idx = CTLineGetStringIndexForPosition(line, relativePoint);
-			link = ([self linkAtCharacterIndex:idx]);
+			
+			NSTextCheckingResult *link = ([self linkAtCharacterIndex:idx]);
 			if (link) return link;
 		}
 	}
