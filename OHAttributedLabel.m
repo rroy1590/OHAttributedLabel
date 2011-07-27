@@ -194,6 +194,8 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 }
 
 -(NSMutableAttributedString*)attributedTextWithLinks {
+    if (_attributedText == nil) return nil;
+    
 	NSMutableAttributedString* str = [_attributedText mutableCopy];
 	if (self.automaticallyDetectLinks) {
 		NSError* error = nil;
