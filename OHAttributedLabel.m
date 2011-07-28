@@ -468,7 +468,9 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 	CGFloat w = size.width;
 	CGSize sz = CTFramesetterSuggestFrameSizeWithConstraints(framesetter,CFRangeMake(0,0),NULL,CGSizeMake(w,CGFLOAT_MAX),NULL);
 	if (framesetter) CFRelease(framesetter);
-	return CGSizeMake(sz.width,sz.height+1); // take 1pt of margin for security
+
+    // take 1pt of margin for security and ensure to return non-fractured values
+	return CGSizeMake(ceil(sz.width), ceil(sz.height+1));
 }
 
 
