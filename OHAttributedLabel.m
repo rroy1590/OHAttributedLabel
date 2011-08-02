@@ -141,7 +141,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 	linkColor = [[UIColor blueColor] retain];
 	highlightedLinkColor = [[UIColor colorWithWhite:0.4 alpha:0.3] retain];
 	underlineLinks = YES;
-	automaticallyDetectLinks = YES;
+	automaticallyDetectLinks = NO;
 	onlyCatchTouchesOnLinks = NO;
 	self.userInteractionEnabled = YES;
 	self.contentMode = UIViewContentModeRedraw;
