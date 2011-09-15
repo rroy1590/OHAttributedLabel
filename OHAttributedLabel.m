@@ -130,13 +130,15 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 -(NSTextCheckingResult*)linkAtPoint:(CGPoint)pt;
 -(NSMutableAttributedString*)attributedTextWithLinks;
 -(void)drawActiveLinkHighlightForRect:(CGRect)rect;
+@property (nonatomic,retain) UIGestureRecognizer *tapRecognizer;
 @end
 
 /////////////////////////////////////////////////////////////////////////////
 
 
 @implementation OHAttributedLabel
-@synthesize linkColor, highlightedLinkColor, underlineLinks;
+@synthesize tapRecognizer;
+@synthesize linkColor, highlightedLinkColor, underlineLinks, allowCopying;
 @synthesize centerVertically, automaticallyDetectLinks, onlyCatchTouchesOnLinks, extendBottomToFit;
 @synthesize delegate;
 
@@ -148,6 +150,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 /////////////////////////////////////////////////////////////////////////////
 
 - (void)commonInit {
+    allowCopying = NO;
 	customLinks = [[NSMutableArray alloc] init];
 	linkColor = [[UIColor blueColor] retain];
 	highlightedLinkColor = [[UIColor colorWithWhite:0.4 alpha:0.3] retain];
@@ -178,6 +181,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 }
 
 -(void)dealloc {
+    [tapRecognizer release];
 	[_attributedText release];
 	[customLinks release];
 	[linkColor release];
@@ -488,6 +492,32 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 	return CGSizeMake(ceil(sz.width), ceil(sz.height+1));
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// MARK: -
+// MARK: Copy Menu
+/////////////////////////////////////////////////////////////////////////////
+
+- (void)copy:(id)sender {
+    UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+    pasteboard.string = self.text;
+}
+
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
+    return self.allowCopying && (action == @selector(copy:));
+}
+
+- (void)handleCopyTap:(UIGestureRecognizer *)recognizer {
+    [self becomeFirstResponder];
+    UIMenuController *menu = [UIMenuController sharedMenuController];
+    [menu setTargetRect:self.frame inView:self.superview];
+    [menu setMenuVisible:YES animated:YES];
+}
+
+- (BOOL)canBecomeFirstResponder {
+    return self.allowCopying;
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 // MARK: -
@@ -565,6 +595,25 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 -(void)setNeedsDisplay {
 	[self resetTextFrame];
 	[super setNeedsDisplay];
+}
+
+-(void)setAllowCopying:(BOOL)value {
+    if (value == allowCopying) {
+        return;
+    }
+    
+    allowCopying = value;
+    
+    self.userInteractionEnabled = allowCopying;
+    
+    if (allowCopying) {
+        self.tapRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                      action:@selector(handleCopyTap:)] autorelease];
+        [self addGestureRecognizer:self.tapRecognizer];
+    } else {
+        [self removeGestureRecognizer:self.tapRecognizer];
+        self.tapRecognizer = nil;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
