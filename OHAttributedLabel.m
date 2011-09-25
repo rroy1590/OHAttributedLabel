@@ -130,15 +130,15 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 -(NSTextCheckingResult*)linkAtPoint:(CGPoint)pt;
 -(NSMutableAttributedString*)attributedTextWithLinks;
 -(void)drawActiveLinkHighlightForRect:(CGRect)rect;
-@property (nonatomic,retain) UIGestureRecognizer *tapRecognizer;
+@property (nonatomic,retain) UIGestureRecognizer *longPressRecognizer;
 @end
 
 /////////////////////////////////////////////////////////////////////////////
 
 
 @implementation OHAttributedLabel
-@synthesize tapRecognizer;
 @synthesize linkColor, highlightedLinkColor, underlineLinks, allowCopying;
+@synthesize longPressRecognizer;
 @synthesize centerVertically, automaticallyDetectLinks, onlyCatchTouchesOnLinks, extendBottomToFit;
 @synthesize delegate;
 
@@ -150,13 +150,13 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 /////////////////////////////////////////////////////////////////////////////
 
 - (void)commonInit {
-    allowCopying = NO;
 	customLinks = [[NSMutableArray alloc] init];
 	linkColor = [[UIColor blueColor] retain];
 	highlightedLinkColor = [[UIColor colorWithWhite:0.4 alpha:0.3] retain];
 	underlineLinks = YES;
 	automaticallyDetectLinks = NO;
 	onlyCatchTouchesOnLinks = NO;
+	allowCopying = NO;
 	self.userInteractionEnabled = YES;
 	self.contentMode = UIViewContentModeRedraw;
 	[self resetAttributedText];
@@ -181,7 +181,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 }
 
 -(void)dealloc {
-    [tapRecognizer release];
+    [longPressRecognizer release];
 	[_attributedText release];
 	[customLinks release];
 	[linkColor release];
@@ -607,12 +607,12 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
     self.userInteractionEnabled = allowCopying;
     
     if (allowCopying) {
-        self.tapRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                      action:@selector(handleCopyTap:)] autorelease];
-        [self addGestureRecognizer:self.tapRecognizer];
+        self.longPressRecognizer = [[[UILongPressGestureRecognizer alloc] initWithTarget:self
+                                                                                  action:@selector(handleCopyTap:)] autorelease];
+        [self addGestureRecognizer:self.longPressRecognizer];
     } else {
-        [self removeGestureRecognizer:self.tapRecognizer];
-        self.tapRecognizer = nil;
+        [self removeGestureRecognizer:self.longPressRecognizer];
+        self.longPressRecognizer = nil;
     }
 }
 
