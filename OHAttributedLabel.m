@@ -130,14 +130,14 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 -(NSTextCheckingResult*)linkAtPoint:(CGPoint)pt;
 -(NSMutableAttributedString*)attributedTextWithLinks;
 -(void)drawActiveLinkHighlightForRect:(CGRect)rect;
-@property (nonatomic,retain) UIGestureRecognizer *tapRecognizer;
+@property (nonatomic,retain) UIGestureRecognizer *longPressRecognizer;
 @end
 
 /////////////////////////////////////////////////////////////////////////////
 
 
 @implementation OHAttributedLabel
-@synthesize tapRecognizer;
+@synthesize longPressRecognizer;
 @synthesize linkColor, highlightedLinkColor, underlineLinks, allowCopying;
 @synthesize centerVertically, automaticallyDetectLinks, onlyCatchTouchesOnLinks, extendBottomToFit;
 @synthesize delegate;
@@ -622,9 +622,9 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
     self.userInteractionEnabled = allowCopying;
     
     if (allowCopying) {
-        self.tapRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                      action:@selector(handleCopyTap:)] autorelease];
-        [self addGestureRecognizer:self.tapRecognizer];
+        self.longPressRecognizer = [[[UILongPressGestureRecognizer alloc] initWithTarget:self
+                                                                                  action:@selector(handleCopyTap:)] autorelease];
+        [self addGestureRecognizer:self.longPressRecognizer];
     } else {
         [[NSNotificationCenter defaultCenter] removeObserver:self
                                                         name:UIMenuControllerWillHideMenuNotification 
