@@ -151,7 +151,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 	[self resetAttributedText];
 }
 
-- (id) initWithFrame:(CGRect)aFrame
+- (id)initWithFrame:(CGRect)aFrame
 {
 	self = [super initWithFrame:aFrame];
 	if (self != nil) {
@@ -170,7 +170,10 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 }
 
 -(void)dealloc {
-    [tapRecognizer release];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIMenuControllerWillHideMenuNotification 
+                                                  object:nil];
+    [longPressRecognizer release];
 	[_attributedText release];
 	[customLinks release];
 	[linkColor release];
@@ -493,17 +496,29 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 }
 
 - (void)handleCopyTap:(UIGestureRecognizer *)recognizer {
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIMenuControllerWillHideMenuNotification 
+                                                  object:nil];
+    
     [self becomeFirstResponder];
     UIMenuController *menu = [UIMenuController sharedMenuController];
     [menu setTargetRect:self.frame inView:self.superview];
     [menu setMenuVisible:YES animated:YES];
+    [self setHighlighted:YES];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(copyMenuDidDismiss:) 
+                                                 name:UIMenuControllerWillHideMenuNotification 
+                                               object:nil];
 }
 
 - (BOOL)canBecomeFirstResponder {
     return self.allowCopying;
 }
 
-
+- (void)copyMenuDidDismiss:(NSNotification *)notification;
+{
+    [self setHighlighted:NO];
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // MARK: -
@@ -597,8 +612,11 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
                                                                       action:@selector(handleCopyTap:)] autorelease];
         [self addGestureRecognizer:self.tapRecognizer];
     } else {
-        [self removeGestureRecognizer:self.tapRecognizer];
-        self.tapRecognizer = nil;
+        [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                        name:UIMenuControllerWillHideMenuNotification 
+                                                      object:nil];
+        [self removeGestureRecognizer:self.longPressRecognizer];
+        self.longPressRecognizer = nil;
     }
 }
 
