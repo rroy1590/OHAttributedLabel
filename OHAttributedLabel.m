@@ -559,6 +559,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 -(void)setAttributedText:(NSAttributedString*)attributedText {
 	[_attributedText release];
 	_attributedText = [attributedText mutableCopy];
+    self.accessibilityLabel = _attributedText.string;
 	
 	[self setNeedsDisplay];
 }
