@@ -33,6 +33,9 @@
 #import "OHAttributedLabel.h"
 #import "NSAttributedString+Attributes.h"
 
+const unichar OHSoftHypen = 0x00AD;
+
+CGFloat CGFlushFromCTTextAlignment(CTTextAlignment alignment);
 CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment);
 CTLineBreakMode CTLineBreakModeFromUILineBreakMode(UILineBreakMode lineBreakMode);
 CGPoint CGPointFlipped(CGPoint point, CGRect bounds);
@@ -43,7 +46,15 @@ CGRect CTRunGetTypographicBoundsAsRect(CTRunRef run, CTLineRef line, CGPoint lin
 BOOL CTLineContainsCharactersFromStringRange(CTLineRef line, NSRange range);
 BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range);
 
-
+CGFloat CGFlushFromCTTextAlignment(CTTextAlignment alignment) {
+	switch (alignment) {
+		case kCTLeftTextAlignment: return 0.0f;
+		case kCTCenterTextAlignment: return 0.5f;
+		case kCTRightTextAlignment: return 1.0f;
+		case kCTJustifiedTextAlignment: return 1.0;
+		default: return 0.0f;
+	}
+}
 
 CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment) {
 	switch (alignment) {
@@ -385,8 +396,8 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 		CGContextRef ctx = UIGraphicsGetCurrentContext();
 		CGContextSaveGState(ctx);
 		
-		// flipping the context to draw core text
-		// no need to flip our typographical bounds from now on
+		// Flipping the context to draw core text
+		// No need to flip our typographical bounds from now on
 		CGContextConcatCTM(ctx, CGAffineTransformScale(CGAffineTransformMakeTranslation(0, self.bounds.size.height), 1.f, -1.f));
 		
 		if (self.shadowColor) {
@@ -398,25 +409,72 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
 			[attrStrWithLinks setTextColor:self.highlightedTextColor];
 		}
 		if (textFrame == NULL) {
-			CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attrStrWithLinks);
-			drawingRect = self.bounds;
-			if (self.centerVertically || self.extendBottomToFit) {
-				CGSize sz = CTFramesetterSuggestFrameSizeWithConstraints(framesetter,CFRangeMake(0,0),NULL,CGSizeMake(drawingRect.size.width,CGFLOAT_MAX),NULL);
-				if (self.extendBottomToFit) {
-					CGFloat delta = MAX(0.f , ceilf(sz.height - drawingRect.size.height)) + 10 /* Security margin */;
-					drawingRect.origin.y -= delta;
-					drawingRect.size.height += delta;
-				}
-				if (self.centerVertically) {
-					drawingRect.origin.y -= (drawingRect.size.height - sz.height)/2;
-				}
-			}
-			CGMutablePathRef path = CGPathCreateMutable();
-			CGPathAddRect(path, NULL, drawingRect);
-			textFrame = CTFramesetterCreateFrame(framesetter,CFRangeMake(0,0), path, NULL);
-			CGPathRelease(path);
-			CFRelease(framesetter);
-		}
+            CTTypesetterRef typesetter = CTTypesetterCreateWithAttributedString((CFAttributedStringRef)attrStrWithLinks);
+            drawingRect = self.bounds;
+            
+            CGFloat width = self.bounds.size.width;
+            // Find a break for line from the beginning of the string to the given width.
+            CFIndex start = 0;
+            CFIndex count = 0;
+            
+            CGFloat yOffset = CGRectGetMaxY(drawingRect);
+            CGFloat flush = CGFlushFromCTTextAlignment(CTTextAlignmentFromUITextAlignment(self.textAlignment));
+            
+            while (start < attrStrWithLinks.string.length) {
+                count = CTTypesetterSuggestLineBreak(typesetter, start, width);
+                // Use the returned character count (to the break) to create the line.
+                CFRange characterRange = CFRangeMake(start, count);
+                
+                // Create the suggested line
+                CTLineRef line = CTTypesetterCreateLine(typesetter, characterRange);
+                CGFloat ascent, descent, leading;
+                
+                // Calculate offset for next line and width that will be set this run
+                CGFloat lineWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
+                yOffset -= (ascent + descent + leading);
+                
+                NSRange stringRange = NSMakeRange(characterRange.location, characterRange.length);
+                unichar lastChar = CFStringGetCharacterAtIndex(CFAttributedStringGetString((CFAttributedStringRef)attrStrWithLinks), (start + count) -1);
+                
+                // Get the offset needed to align the line if justification is requested
+                double penOffset = CTLineGetPenOffsetForFlush(line, flush, width);
+                
+                // Move the given text drawing position by the calculated offset
+                // for justification and draw the line.
+                CGContextSetTextPosition(ctx, drawingRect.origin.x + penOffset, yOffset);
+                
+                // If the last char is a soft hyphen we replace it with a
+                // real hyphen and justify the line to squeeze it in.
+                if(OHSoftHypen == lastChar) {
+                    NSMutableAttributedString *lineAttributtedString = [[attrStrWithLinks attributedSubstringFromRange:stringRange] mutableCopy];
+                    NSRange replaceRange = NSMakeRange(stringRange.length-1, 1);
+                    
+                    // We use hyphen-minus (U+00AD) instead of the real hyphen (U+2010) because
+                    // quite a lot of fonts fail at the real hyphen. This is equivalent to
+                    // WebKit's behaviour.
+                    // (See http://www.opensource.apple.com/source/WebCore/WebCore-528.15/platform/graphics/mac/CoreTextController.cpp line 224)
+                    [lineAttributtedString replaceCharactersInRange:replaceRange withString:@"-"];
+                    
+                    CTLineRef hyphenLine = CTLineCreateWithAttributedString((CFAttributedStringRef)lineAttributtedString);
+                    CTLineRef justifiedLine = CTLineCreateJustifiedLine(hyphenLine, 1.0, lineWidth);
+                    
+                    CTLineDraw(hyphenLine, ctx);
+                    
+                    CFRelease(justifiedLine);
+                    CFRelease(hyphenLine);
+                    [lineAttributtedString release];
+                } else {
+                    CTLineDraw(line, ctx);
+                }
+                
+                CFRelease(line);
+                
+                // Move the index beyond the line break and get ready to draw the next line
+                start += count;
+            }
+            
+			CFRelease(typesetter);
+        }
 		
 		// draw highlights for activeLink
 		if (activeLink) {
