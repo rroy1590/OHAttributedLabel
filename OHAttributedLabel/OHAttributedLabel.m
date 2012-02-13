@@ -431,7 +431,7 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
                 
                 // Calculate offset for next line and width that will be set this run
                 CGFloat lineWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
-                yOffset -= (ascent + descent + leading);
+                yOffset -= (ascent);
                 
                 NSRange stringRange = NSMakeRange(characterRange.location, characterRange.length);
                 unichar lastChar = CFStringGetCharacterAtIndex(CFAttributedStringGetString((CFAttributedStringRef)attrStrWithLinks), (start + count) -1);
@@ -466,6 +466,8 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
                 } else {
                     CTLineDraw(line, ctx);
                 }
+                
+                yOffset -= (descent + leading);
                 
                 CFRelease(line);
                 
