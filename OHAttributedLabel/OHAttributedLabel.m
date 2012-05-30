@@ -456,9 +456,9 @@ BOOL CTRunContainsCharactersFromStringRange(CTRunRef run, NSRange range) {
                     [lineAttributtedString replaceCharactersInRange:replaceRange withString:@"-"];
                     
                     CTLineRef hyphenLine = CTLineCreateWithAttributedString((CFAttributedStringRef)lineAttributtedString);
-                    CTLineRef justifiedLine = CTLineCreateJustifiedLine(hyphenLine, 1.0, lineWidth);
+                    CTLineRef justifiedLine = CTLineCreateJustifiedLine(hyphenLine, 1.0, ceil(lineWidth));
                     
-                    CTLineDraw(hyphenLine, ctx);
+                    CTLineDraw(justifiedLine, ctx);
                     
                     CFRelease(justifiedLine);
                     CFRelease(hyphenLine);
