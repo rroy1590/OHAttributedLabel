@@ -50,7 +50,10 @@ CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment) {
 		case UITextAlignmentLeft: return kCTLeftTextAlignment;
 		case UITextAlignmentCenter: return kCTCenterTextAlignment;
 		case UITextAlignmentRight: return kCTRightTextAlignment;
+#pragma GCC diagnostic push // supress warning
+#pragma GCC diagnostic ignored "-Wswitch"
 		case UITextAlignmentJustify: return kCTJustifiedTextAlignment; /* special OOB value if we decide to use it even if it's not really standard... */
+#pragma GCC diagnostic pop
 		default: return kCTNaturalTextAlignment;
 	}
 }
